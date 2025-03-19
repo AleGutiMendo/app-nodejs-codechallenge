@@ -1,82 +1,181 @@
-# Yape Code Challenge :rocket:
+# Yape Technical Challenge
 
-Our code challenge will let you marvel us with your Jedi coding skills :smile:. 
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-Don't forget that the proper way to submit your work is to fork the repo and create a PR :wink: ... have fun !!
+<p align="center">Un monorepo basado en <a href="http://nodejs.org" target="_blank">Node.js</a> y <a href="http://nestjs.com" target="_blank">NestJS</a> para construir aplicaciones escalables y eficientes.</p>
 
-- [Problem](#problem)
-- [Tech Stack](#tech_stack)
-- [Send us your challenge](#send_us_your_challenge)
+## Descripción
 
-# Problem
+Este repositorio contiene múltiples aplicaciones y servicios desarrollados con el framework NestJS. Es parte del desafío técnico de Yape y está diseñado para demostrar buenas prácticas en el desarrollo de microservicios y APIs.
 
-Every time a financial transaction is created it must be validated by our anti-fraud microservice and then the same service sends a message back to update the transaction status.
-For now, we have only three transaction statuses:
+## Estructura del proyecto
 
-<ol>
-  <li>pending</li>
-  <li>approved</li>
-  <li>rejected</li>  
-</ol>
-
-Every transaction with a value greater than 1000 should be rejected.
-
-```mermaid
-  flowchart LR
-    Transaction -- Save Transaction with pending Status --> transactionDatabase[(Database)]
-    Transaction --Send transaction Created event--> Anti-Fraud
-    Anti-Fraud -- Send transaction Status Approved event--> Transaction
-    Anti-Fraud -- Send transaction Status Rejected event--> Transaction
-    Transaction -- Update transaction Status event--> transactionDatabase[(Database)]
+```plaintext
+.env
+.gitignore
+.prettierrc
+.docker-compose.yml
+.eslint.config.mjs
+.kafka-topics.sh
+.nest-cli.json
+.package.json
+.pnpm-lock.yaml
+.README.md
+.tsconfig.build.json
+.tsconfig.json
+apps/
+  yape-anti-fraud-ms/
+    src/
+      main.ts
+      yape-anti-fraud-ms.module.ts
+      application/
+      domain/
+      infrastructure/
+      interface/
+    test/
+  yape-api-gateway/
+    src/
+      main.ts
+      yape-api-gateway.module.ts
+      application/
+      domain/
+      infrastructure/
+      interface/
+    test/
+  yape-transaction-ms/
+    src/
+      main.ts
+      yape-transaction-ms.module.ts
+      application/
+      domain/
+      infrastructure/
+      interface/
+    test/
 ```
 
-# Tech Stack
+## Aplicaciones
+- **yape-anti-fraud-ms**: Microservicio para la detección de fraudes.
+- **yape-api-gateway**: Gateway API para centralizar las solicitudes.
+- **yape-transaction-ms**: Microservicio para la gestión de transacciones.
 
-<ol>
-  <li>Node. You can use any framework you want (i.e. Nestjs with an ORM like TypeOrm or Prisma) </li>
-  <li>Any database</li>
-  <li>Kafka</li>    
-</ol>
+## Instalación
+Asegúrate de tener instalado `pnpm`.
 
-We do provide a `Dockerfile` to help you get started with a dev environment.
+```sh
+pnpm install
+```
 
-You must have two resources:
+## Ejecución del proyecto
 
-1. Resource to create a transaction that must containt:
+### Desarrollo
+```sh
+pnpm start:dev
+```
 
+### Modo Watch
+```sh
+pnpm start:watch
+```
+
+### Producción
+```sh
+pnpm build && pnpm start:prod
+```
+
+### Pruebas
+#### Unitarias
+```sh
+pnpm test
+```
+
+#### End-to-End (E2E)
+```sh
+pnpm test:e2e
+```
+
+#### Cobertura
+```sh
+pnpm test:cov
+```
+## Variables de Entorno
+
+Configura las siguientes variables en un archivo .env:
+
+```plaintext
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=postgres
+DB_NAME=transactions
+
+KAFKA_BROKER=localhost:9092
+KAFKA_CLIENT_ID=transaction-ms
+KAFKA_GROUP_ID=transaction-consumer
+
+MAX_AMOUNT=1000
+```
+
+## Ejemplos de Uso
+
+### 1. Crear una Transacción
+El proceso inicia desde el API Gateway enviando una solicitud al endpoint:
+
+**Endpoint:**
+```
+POST http://localhost:3000/transactions/create
+```
+
+**Request Body:**
 ```json
 {
-  "accountExternalIdDebit": "Guid",
-  "accountExternalIdCredit": "Guid",
-  "tranferTypeId": 1,
-  "value": 120
+  "accountExternalIdDebit": "550e8400-e29b-41d4-a716-446655440000",
+  "accountExternalIdCredit": "550e8400-e29b-41d4-a716-446655440001",
+  "transferTypeId": 1,
+  "value": 1090.50
 }
 ```
 
-2. Resource to retrieve a transaction
+**Flujo del proceso:**
+1. El API Gateway recibe la solicitud y la envía al microservicio `yape-transaction-ms`.
+2. `yape-transaction-ms` procesa la transacción y publica un evento en Kafka (`transaction.created`).
+3. `yape-anti-fraud-ms` consume el evento, valida si la transacción es fraudulenta y publica otro evento (`transaction.status.updated`).
+4. `yape-transaction-ms` actualiza el estado de la transacción en la base de datos.
 
+### 2. Validación Anti-Fraude
+El microservicio `yape-anti-fraud-ms` escucha eventos de Kafka y evalúa si la transacción supera el monto permitido. Si lo hace, la marca como `REJECTED`, de lo contrario, la aprueba (`APPROVED`).
+
+**Ejemplo de mensaje recibido en `yape-anti-fraud-ms`:**
 ```json
 {
-  "transactionExternalId": "Guid",
-  "transactionType": {
-    "name": ""
-  },
-  "transactionStatus": {
-    "name": ""
-  },
-  "value": 120,
-  "createdAt": "Date"
+  "id": "a63f9c83-ad03-4e8b-8b2f-82afad281ff1",
+  "value": 1090.50
 }
 ```
 
-## Optional
+### 3. Actualización del Estado de la Transacción
+Una vez validada la transacción, `yape-anti-fraud-ms` publica un nuevo evento en Kafka con el resultado de la validación:
 
-You can use any approach to store transaction data but you should consider that we may deal with high volume scenarios where we have a huge amount of writes and reads for the same data at the same time. How would you tackle this requirement?
+**Ejemplo de mensaje publicado:**
+```json
+{
+  "id": "a63f9c83-ad03-4e8b-8b2f-82afad281ff1",
+  "status": "REJECTED"
+}
+```
 
-You can use Graphql;
+Este mensaje es consumido por `yape-transaction-ms`, que actualiza el estado de la transacción en la base de datos.
 
-# Send us your challenge
+## Despliegue
+Para desplegar las aplicaciones, puedes usar Docker y el archivo `docker-compose.yml` incluido en este repositorio:
 
-When you finish your challenge, after forking a repository, you **must** open a pull request to our repository. There are no limitations to the implementation, you can follow the programming paradigm, modularization, and style that you feel is the most appropriate solution.
+```sh
+docker-compose up -d
+```
 
-If you have any questions, please let us know.
+## Recursos
+- [Documentación de NestJS](https://docs.nestjs.com/)
+- [Canal de Discord de NestJS](https://discord.com/invite/nestjs)
+- [Cursos oficiales de NestJS](https://nestjs.com/courses/)
+

@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@transaction/application/*": ["apps/yape-transaction-ms/src/application/*"],
+      "@transaction/domain/*": ["apps/yape-transaction-ms/src/domain/*"],
+      "@transaction/infrastructure/*": ["apps/yape-transaction-ms/src/infrastructure/*"],
+      "@transaction/common/*": ["apps/yape-transaction-ms/src/common/*"],
+      "@transaction/interface/*": ["apps/yape-transaction-ms/src/interface/*"],
+      "@apiGateway/application/*": ["apps/yape-api-gateway/src/transaction/application/*"],
+      "@apiGateway/domain/*": ["apps/yape-api-gateway/src/transaction/domain/*"],
+      "@apiGateway/infrastructure/*": ["apps/yape-api-gateway/src/transaction/infrastructure/*"],
+      "@apiGateway/common/*": ["apps/yape-api-gateway/src/transaction/common/*"],
+      "@apiGateway/interface/*": ["apps/yape-api-gateway/src/transaction/interface/*"],
+      "@antifraud/application/*": ["apps/yape-anti-fraud-ms/src/application/*"],
+      "@antifraud/domain/*": ["apps/yape-anti-fraud-ms/src/domain/*"],
+      "@antifraud/infrastructure/*": ["apps/yape-anti-fraud-ms/src/infrastructure/*"],
+      "@antifraud/common/*": ["apps/yape-anti-fraud-ms/src/common/*"],
+      "@antifraud/interface/*": ["apps/yape-anti-fraud-ms/src/interface/*"]
+    }
+  }
+}
