@@ -19,7 +19,7 @@ export class AntiFraudProducer {
       return false;
     }
 
-    const payload = JSON.parse(JSON.stringify(message));
+    const payload = { ...message };
 
     this.logger.log(`Enviando mensaje a Kafka: ${JSON.stringify(payload)}`);
 
@@ -31,10 +31,11 @@ export class AntiFraudProducer {
         `Mensaje enviado a Kafka: transaction.status.updated - ID ${message.id}`,
       );
       return true;
-    } catch (err) {
+    } catch (err: unknown) {
+      const error = err as Error;
       this.logger.error(
-        `Error enviando mensaje a Kafka: ${err.message}`,
-        err.stack,
+        `Error enviando mensaje a Kafka: ${error.message}`,
+        error.stack,
       );
       return false;
     }

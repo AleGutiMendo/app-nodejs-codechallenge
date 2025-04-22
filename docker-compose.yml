@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:14
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -10,7 +10,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       retries: 5
       start_period: 10s
@@ -25,14 +25,56 @@ services:
     depends_on:
       - zookeeper
     environment:
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_BROKER_ID: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_JMX_PORT: 9991
     ports:
-      - "9092:9092"
+      - '9092:9092'
+
+  yape-transaction-ms:
+    build:
+      context: .
+      dockerfile: ./apps/yape-transaction-ms/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - DB_NAME=transactions
+      - KAFKA_BROKER=kafka:29092
+    depends_on:
+      - postgres
+      - kafka
+
+  yape-anti-fraud-ms:
+    build:
+      context: .
+      dockerfile: ./apps/yape-anti-fraud-ms/Dockerfile
+    ports:
+      - '3002:3002'
+    environment:
+      - KAFKA_BROKER=kafka:29092
+      - MAX_AMOUNT=1000
+    depends_on:
+      - kafka
+
+  yape-api-gateway:
+    build:
+      context: .
+      dockerfile: ./apps/yape-api-gateway/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - TRANSACTION_SERVICE_URL=http://yape-transaction-ms:3001
+      - KAFKA_BROKER=kafka:29092
+    depends_on:
+      - yape-transaction-ms
+      - yape-anti-fraud-ms
 
 volumes:
   pgdata:

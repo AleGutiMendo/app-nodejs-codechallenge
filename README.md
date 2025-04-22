@@ -56,11 +56,13 @@ apps/
 ```
 
 ## Aplicaciones
+
 - **yape-anti-fraud-ms**: Microservicio para la detección de fraudes.
 - **yape-api-gateway**: Gateway API para centralizar las solicitudes.
 - **yape-transaction-ms**: Microservicio para la gestión de transacciones.
 
 ## Instalación
+
 Asegúrate de tener instalado `pnpm`.
 
 ```sh
@@ -70,35 +72,43 @@ pnpm install
 ## Ejecución del proyecto
 
 ### Desarrollo
+
 ```sh
 pnpm start:dev
 ```
 
 ### Modo Watch
+
 ```sh
 pnpm start:watch
 ```
 
 ### Producción
+
 ```sh
 pnpm build && pnpm start:prod
 ```
 
 ### Pruebas
+
 #### Unitarias
+
 ```sh
 pnpm test
 ```
 
 #### End-to-End (E2E)
+
 ```sh
 pnpm test:e2e
 ```
 
 #### Cobertura
+
 ```sh
 pnpm test:cov
 ```
+
 ## Variables de Entorno
 
 Configura las siguientes variables en un archivo .env:
@@ -120,44 +130,52 @@ MAX_AMOUNT=1000
 ## Ejemplos de Uso
 
 ### 1. Crear una Transacción
+
 El proceso inicia desde el API Gateway enviando una solicitud al endpoint:
 
 **Endpoint:**
+
 ```
 POST http://localhost:3000/transactions/create
 ```
 
 **Request Body:**
+
 ```json
 {
   "accountExternalIdDebit": "550e8400-e29b-41d4-a716-446655440000",
   "accountExternalIdCredit": "550e8400-e29b-41d4-a716-446655440001",
   "transferTypeId": 1,
-  "value": 1090.50
+  "value": 1090.5
 }
 ```
 
 **Flujo del proceso:**
+
 1. El API Gateway recibe la solicitud y la envía al microservicio `yape-transaction-ms`.
 2. `yape-transaction-ms` procesa la transacción y publica un evento en Kafka (`transaction.created`).
 3. `yape-anti-fraud-ms` consume el evento, valida si la transacción es fraudulenta y publica otro evento (`transaction.status.updated`).
 4. `yape-transaction-ms` actualiza el estado de la transacción en la base de datos.
 
 ### 2. Validación Anti-Fraude
+
 El microservicio `yape-anti-fraud-ms` escucha eventos de Kafka y evalúa si la transacción supera el monto permitido. Si lo hace, la marca como `REJECTED`, de lo contrario, la aprueba (`APPROVED`).
 
 **Ejemplo de mensaje recibido en `yape-anti-fraud-ms`:**
+
 ```json
 {
   "id": "a63f9c83-ad03-4e8b-8b2f-82afad281ff1",
-  "value": 1090.50
+  "value": 1090.5
 }
 ```
 
 ### 3. Actualización del Estado de la Transacción
+
 Una vez validada la transacción, `yape-anti-fraud-ms` publica un nuevo evento en Kafka con el resultado de la validación:
 
 **Ejemplo de mensaje publicado:**
+
 ```json
 {
   "id": "a63f9c83-ad03-4e8b-8b2f-82afad281ff1",
@@ -168,14 +186,69 @@ Una vez validada la transacción, `yape-anti-fraud-ms` publica un nuevo evento e
 Este mensaje es consumido por `yape-transaction-ms`, que actualiza el estado de la transacción en la base de datos.
 
 ## Despliegue
+
 Para desplegar las aplicaciones, puedes usar Docker y el archivo `docker-compose.yml` incluido en este repositorio:
 
 ```sh
-docker-compose up -d
+docker compose up -d
 ```
 
+### Estructura de Docker Compose
+
+El proyecto incluye un archivo `docker-compose.yml` que configura todos los servicios necesarios para el correcto funcionamiento de los microservicios:
+
+- **postgres**: Base de datos PostgreSQL para el almacenamiento de transacciones.
+- **zookeeper y kafka**: Infraestructura de mensajería para la comunicación entre microservicios.
+- **yape-transaction-ms**: Microservicio de transacciones, conectado a Postgres y Kafka.
+- **yape-anti-fraud-ms**: Microservicio de detección de fraudes, configurado con un límite máximo de transacción (MAX_AMOUNT=1000).
+- **yape-api-gateway**: API Gateway que expone endpoints para los clientes.
+
+### Configuración de Microservicios
+
+Cada microservicio está configurado con variables de entorno específicas:
+
+**yape-transaction-ms**:
+
+- DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME: Configuración de la base de datos.
+- KAFKA_BROKER: Dirección del broker de Kafka (kafka:29092 en la red Docker).
+
+**yape-anti-fraud-ms**:
+
+- KAFKA_BROKER: Dirección del broker de Kafka.
+- MAX_AMOUNT: Monto máximo permitido para transacciones (1000).
+
+**yape-api-gateway**:
+
+- TRANSACTION_SERVICE_URL: URL del microservicio de transacciones.
+- KAFKA_BROKER: Dirección del broker de Kafka.
+
+### Puertos expuestos
+
+Después del despliegue, los servicios estarán disponibles en los siguientes puertos:
+
+- API Gateway: http://localhost:3000
+- Transaction MS: http://localhost:3001
+- Anti-Fraud MS: http://localhost:3002
+- Postgres: localhost:5432
+- Kafka: localhost:9092
+
+### Pruebas con Postman
+
+Para probar el sistema, puedes usar Postman con el siguiente JSON para crear una transacción:
+
+```json
+{
+  "accountExternalIdDebit": "123e4567-e89b-12d3-a456-426614174000",
+  "accountExternalIdCredit": "123e4567-e89b-12d3-a456-426614174001",
+  "transferTypeId": 1,
+  "value": 100.5
+}
+```
+
+Envía esta solicitud a `http://localhost:3000/transactions/create` como POST con Content-Type: application/json.
+
 ## Recursos
+
 - [Documentación de NestJS](https://docs.nestjs.com/)
 - [Canal de Discord de NestJS](https://discord.com/invite/nestjs)
 - [Cursos oficiales de NestJS](https://nestjs.com/courses/)
-
